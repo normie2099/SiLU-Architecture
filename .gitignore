@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+*.o
+*.elf
+build/
+# large model/data files: keep out of git, record versions in docs/SETUP.md
+*.pt
+*.onnx
+datasets/
+coco/
+m5out/
+# keep raw results that are small; large dumps go to an archive
+results/raw/**/*.vcd
+refs/*.pdf
