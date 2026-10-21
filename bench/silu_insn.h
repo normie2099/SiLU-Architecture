@@ -1,20 +1,19 @@
-/* silu_insn.h - assembler macro for the custom SiLU instruction.
- *
- * !! MUST MATCH YOUR gem5 decoder.isa AND YOUR RTL !!
- * Fill in the three numbers below from the decoder you already wrote. Then run
- *   make -C bench check-insn
- * to confirm the encoded word disassembles to the opcode/funct you intended.
- * Default below is only a placeholder: custom-0 (0x0b) is used by some cores for their own
- * instructions, so check your core's manual before using it.
+/* silu_insn.h - assembler macro for the custom SiLU instruction (R-type, rd = SiLU(rs1), rs2 = x0).
+ * Encoding must match gem5/silu_instruction.patch: opcode 0x0B (custom-0), funct3 0, funct7 0.
  */
 #ifndef SILU_INSN_H
 #define SILU_INSN_H
 
 #ifndef SILU_OPCODE
-#error "Set SILU_OPCODE (e.g. 0x0b for custom-0, 0x2b custom-1, 0x5b custom-2, 0x7b custom-3), SILU_FUNCT3 and SILU_FUNCT7 to match decoder.isa"
+#define SILU_OPCODE 0x0b
+#endif
+#ifndef SILU_FUNCT3
+#define SILU_FUNCT3 0
+#endif
+#ifndef SILU_FUNCT7
+#define SILU_FUNCT7 0
 #endif
 
-/* R-type: rd = SILU(rs1); rs2 = x0. */
 #define SILU_INSN(x) ({                                                       \
     int _r;                                                                   \
     __asm__ volatile (".insn r %1, %2, %3, %0, %4, x0"                        \

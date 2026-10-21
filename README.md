@@ -1,46 +1,48 @@
-# SiLU instruction for RISC-V: from gates to models
+# Multiplier-less SiLU custom instruction for RISC-V
 
-Course project (BAEVD202 Computer Architecture, VIT Vellore) and the base of a possible paper.
+Computer Architecture (BAEVD202) course project, VIT Vellore.
 
-**Question.** On a RISC-V core, how much does a multiplier-free fixed-point SiLU instruction buy, what does
-it cost, and what does it do to a real model?
+**Question.** What does a one-cycle, multiplier-free SiLU instruction change in the processor performance
+equation (instruction count x CPI x clock period), on an in-order and an out-of-order RISC-V core, and how much
+of that survives at whole-model level (Amdahl's law)?
 
-**What is in here.** One place for every file, script and result, so every number in the report can be
-traced to a command and a raw output file. Read `docs/ROADMAP.md` first, then `docs/REPRODUCE.md`.
+SiLU(x) = x * sigmoid(x) is the activation in YOLOv8 and many other networks. The instruction implements the
+six-segment piecewise-linear approximation f4 of Spagnolo, Perri and Corsonello (ISVLSI 2025) in 16-bit Q6.10
+fixed point, using only shifts, adds and comparators. See `docs/SYLLABUS_MAP.md` for how the project maps to the
+course and which experiments are planned.
 
+## Layout
 ```
-golden/    f4_golden.py + f4_vectors.hex: the reference for the approximation (65,536 test vectors)
-rtl/       Verilog of the f4 unit and its testbench                      [to add from the team]
-quartus/   project, SDC, timing / fitter / power reports                  [to add from the team]
-gem5/      the diff / files that add the custom instruction, run configs [to add from the team]
-bench/     C kernels: expf soft/hard float, integer f4, lookup table, custom instruction
-model/     PyTorch bit-exact f4 and the swap-into-YOLO tools
-scripts/   synth2gem5.py (Quartus delay -> gem5 latency), parse_gem5_stats.py, ...
-results/   raw/ (untouched tool output), tables/ (generated), figures/ (generated)
-docs/      roadmap, paper contract, setup, reproduction steps, related work, Q&A, findings
-report/    IEEE report source (written after the results exist)
-slides/    class presentation
-refs/      the papers used
-LOG.md     dated lab log: what was done, the command, where the output is, what it means
+golden/    f4_golden.py + f4_vectors.hex: reference model, error analysis, 65,536 test vectors
+rtl/       silu.v (combinational unit), silu_timing.v (registered wrapper), silu_tb.v (exhaustive testbench)
+quartus/   timing.sdc, silu.qsf, reports/ (timing, fitter, mapper, power summaries)
+gem5/      silu_instruction.patch (adds the instruction), benchmark.c, test_custom.c, build/run notes
+bench/     C kernels: expf, integer f4, lookup table, custom instruction; host test
+model/     PyTorch bit-exact f4 and the tools to swap it into a model
+scripts/   synth2gem5.py (synthesis delay -> gem5 latency), parse_gem5_stats.py (gem5 stats -> CSV)
+docs/      SYLLABUS_MAP.md, FINDINGS.md (measured facts), REPRODUCE.md (step by step)
 ```
-
-## Status
-
-See `LOG.md` (newest entry last). Short version: golden model, PyTorch emulator, C kernels, latency
-script are written and tested (see LOG.md). RTL, Quartus and gem5 files must be added by the team; the gem5
-runs, YOLO runs and report come after that.
-
-## Rules
-
-1. No hand-typed numbers: results come from scripts reading files in `results/raw/`.
-2. The golden model defines correct output. RTL, C and PyTorch all match `golden/f4_vectors.hex`.
-3. Log every run in `LOG.md` with the exact command.
-4. Commit after each working step; tag the commit behind each figure used in the report.
 
 ## Quick start
+```
+make golden host-test           # numpy + gcc only
+pip install torch               # then:
+make torch-check                # PyTorch emulator == golden on all 65,536 inputs
+```
 
-```
-make golden host-test           # always works (numpy + gcc)
-pip install torch ultralytics   # then:
-make torch-check
-```
+## Results so far
+- f4 error: max 0.0452 on [-3, 3], 0.0719 at x = +-4; mean 0.0279 on (-4, 4) (`docs/FINDINGS.md`).
+- Quartus (Cyclone IV E): 8.058 ns critical path, Fmax about 123 MHz, 191 logic elements, no multipliers, no memory.
+- gem5: custom instruction decodes and runs (`gem5/test_custom.c`). The decoder logic matches the golden model on all 65,536 inputs. First speed-up measurement is in `gem5/benchmark.c`.
+
+## Known issues and next steps
+1. **Latency is not yet tied to the hardware.** The instruction runs as a plain integer-ALU op in gem5; it should
+   take the latency derived from the Quartus delay (`scripts/synth2gem5.py`).
+2. **Benchmark fairness.** `gem5/benchmark.c` sweeps raw -5000..+4990 (about 18% of inputs fall outside [-4, 4])
+   and both loops contain `volatile` stores. Next version: inputs in [-4, 4), identical loop overhead, stats
+   reset around the loop only, same `-O2` flags, plus integer-f4 and table baselines.
+3. **RTL vs reference.** Run `rtl/silu_tb.v` and compare with `golden/f4_vectors.hex`
+   (`python3 golden/f4_golden.py --compare results/raw/rtl_out.hex`); the result is not yet recorded.
+4. **Timing constraints.** Add `derive_clock_uncertainty` to `quartus/timing.sdc`. The power estimate in
+   `quartus/reports/` has low confidence (no simulation toggle data).
+5. In-order vs out-of-order, branch-predictor and Amdahl experiments: see `docs/SYLLABUS_MAP.md`.

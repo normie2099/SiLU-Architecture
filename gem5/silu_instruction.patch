@@ -1,0 +1,35 @@
+diff --git a/src/arch/riscv/isa/decoder.isa b/src/arch/riscv/isa/decoder.isa
+index c7eefbc79c..c914f5df00 100644
+--- a/src/arch/riscv/isa/decoder.isa
++++ b/src/arch/riscv/isa/decoder.isa
+@@ -420,6 +420,30 @@ decode QUADRANT default Unknown::unknown() {
+         }
+     }
+     0x3: decode OPCODE5 {
++        0x02: decode FUNCT3 {
++            format ROp {
++                0x0: custom_silu({{
++                    int32_t x = (int32_t)(int16_t)Rs1_sd;
++                    int32_t result;
++
++                    if (x <= -4096) {
++                        result = 0;
++                    } else if (x <= -1024) {
++                        result = -(x >> 4) - 384;
++                    } else if (x <= 0) {
++                        result = (x >> 2) - 38;
++                    } else if (x <= 1024) {
++                        result = (x >> 1) + (x >> 2) - 38;
++                    } else if (x <= 4096) {
++                        result = x + (x >> 4) - 384;
++                    } else {
++                        result = x;
++                    }
++
++                    Rd_sd = (int64_t)(int16_t)result;                    
++                }}, IntAluOp);
++            }
++        }
+         0x00: decode FUNCT3 {
+             format Load {
+                 0x0: lb({{

@@ -36,7 +36,7 @@ Reading: both the table and expf are far more accurate than f4 on [-4, 4). If th
 accuracy-versus-cost story, the table is the bar f4 has to beat on cost (cycles, energy, memory), and the
 model-level accuracy test (YOLOv8n mAP) must show that f4's error does not matter in practice.
 
-## Quartus (from the screenshot in `quartus/`)
+## Quartus (from `quartus/reports/`)
 
 Cyclone IV, slow 1200 mV 85 C: data delay 8.058 ns, slack +1.876 ns at 10 ns constraint, Fmax about 123 MHz.
 The SDC file has no clock uncertainty (add `derive_clock_uncertainty`).

@@ -12,4 +12,4 @@ coco/
 m5out/
 # keep raw results that are small; large dumps go to an archive
 results/raw/**/*.vcd
-refs/*.pdf
+.DS_Store

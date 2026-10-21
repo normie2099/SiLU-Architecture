@@ -27,7 +27,7 @@ make host-test    # C kernels vs golden
 4. Run each in gem5 and keep the whole output directory as `results/raw/<cpu>_<variant>_<clock>/`.
 5. `make stats` -> `results/tables/runs.csv`.
 Note: the harness that calls the kernel and the m5 stat-reset/dump around the loop are part of the gem5
-setup; see `docs/GEM5_NOTES.md`.
+setup; see `gem5/README.md`.
 
 ## 3. Latency from synthesis  [needs a Quartus timing report]
 ```
