@@ -1,0 +1,6 @@
+activation,SiLU modules replaced,SiLU modules left,activation calls (val run),"inputs outside [-4,4] %",mAP50,mAP50-95,delta mAP50-95 vs exact
+exact SiLU,57,0,969,8.76,0.6024,0.4439,+0.0000
+"exact SiLU, Q6.10 rounding",57,0,969,8.73,0.5924,0.4374,-0.0066
+f4 (16-bit strict),57,0,969,8.85,0.5991,0.4359,-0.0081
+f4 (tails exact),57,0,969,8.89,0.6007,0.4359,-0.0080
+257-entry table,57,0,969,8.73,0.5958,0.4373,-0.0066

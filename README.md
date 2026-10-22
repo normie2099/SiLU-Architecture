@@ -6,43 +6,48 @@ Computer Architecture (BAEVD202) course project, VIT Vellore.
 equation (instruction count x CPI x clock period), on an in-order and an out-of-order RISC-V core, and how much
 of that survives at whole-model level (Amdahl's law)?
 
-SiLU(x) = x * sigmoid(x) is the activation in YOLOv8 and many other networks. The instruction implements the
+SiLU(x) = x * sigmoid(x) is the activation of YOLOv8 and many other networks. The instruction implements the
 six-segment piecewise-linear approximation f4 of Spagnolo, Perri and Corsonello (ISVLSI 2025) in 16-bit Q6.10
-fixed point, using only shifts, adds and comparators. See `docs/SYLLABUS_MAP.md` for how the project maps to the
-course and which experiments are planned.
+fixed point, using only shifts, adds and comparators. `docs/SYLLABUS_MAP.md` maps the project to the course.
+
+## Pipeline
+```
+golden model -> Verilog (rtl/) -> Quartus timing (quartus/) -> 8.058 ns
+                                                                  | scripts/run_gem5.py: cycles = ceil(delay / period)
+gem5 + custom instruction (gem5/) -> in-order and out-of-order runs (results/raw/) -> tables, figures (results/)
+PyTorch f4 (model/) -> YOLOv8n accuracy and activation counts -----------------------^
+```
 
 ## Layout
 ```
 golden/    f4_golden.py + f4_vectors.hex: reference model, error analysis, 65,536 test vectors
-rtl/       silu.v (combinational unit), silu_timing.v (registered wrapper), silu_tb.v (exhaustive testbench)
-quartus/   timing.sdc, silu.qsf, reports/ (timing, fitter, mapper, power summaries)
-gem5/      silu_instruction.patch (adds the instruction), benchmark.c, test_custom.c, build/run notes
-bench/     C kernels: expf, integer f4, lookup table, custom instruction; host test
-model/     PyTorch bit-exact f4 and the tools to swap it into a model
-scripts/   synth2gem5.py (synthesis delay -> gem5 latency), parse_gem5_stats.py (gem5 stats -> CSV)
-docs/      SYLLABUS_MAP.md, FINDINGS.md (measured facts), REPRODUCE.md (step by step)
+rtl/       silu.v (combinational), silu_timing.v (registered wrapper), silu_tb.v (exhaustive testbench)
+quartus/   timing.sdc, silu.qsf, reports/ (timing, fitter, mapper, power)
+gem5/      silu_instruction.patch, configs/silu_se.py (op-class latency), build and run notes
+bench/     bench_main.c (activation loop), conv_main.c (conv layer), exhaustive_main.c, kernels, inputs
+model/     PyTorch f4, swap tools, eval_yolo.py, count_model.py
+scripts/   run_gem5.py, run_all.py, collect_runs.py, make_results.py, synth2gem5.py, pack_runs.sh
+results/   raw/ (every gem5 run, RTL and YOLO outputs), tables/ (generated), figures/ (generated)
+docs/      SYLLABUS_MAP.md, FINDINGS.md (all numbers), REPRODUCE.md (commands)
 ```
+
+## Headline results (details and caveats: `docs/FINDINGS.md`)
+- Correctness: Verilog, the instruction inside gem5, C and PyTorch all match the golden model on all 65,536 inputs.
+- Hardware (Quartus, Cyclone IV E): 8.058 ns critical path, 191 logic elements, no multipliers or memory.
+- Loop (1,024 inputs in [-4,4)): the instruction takes 7.0 cycles/activation in-order and 1.0 out-of-order, against 169.8 / 36.8 for float `expf`, 16.6 / 3.8 for integer f4 and 21.0 / 5.0 for a lookup table.
+- Latency: in-order exposes latency beyond ~4 cycles; out-of-order hides it only if the unit is pipelined. At 1 GHz the instruction's advantage over integer f4 shrinks to 1.1-1.4x in-order.
+- Branches: software f4 mispredicts 0.41 branches per activation on unordered data; the instruction has none.
+- Whole model (YOLOv8n, 315 MACs per activation): about 1.1x over `expf` on a scalar core, 2.5-2.7x if MACs are 16x faster (Amdahl).
+- Accuracy (COCO128): exact SiLU 0.4439 mAP50-95; f4 0.4359; Q6.10 rounding alone accounts for 0.4374.
 
 ## Quick start
 ```
 make golden host-test           # numpy + gcc only
-pip install torch               # then:
-make torch-check                # PyTorch emulator == golden on all 65,536 inputs
+make rtl-check                  # needs Icarus Verilog
+make results                    # regenerate tables and figures from results/raw
 ```
+Full instructions, including gem5 and the YOLO evaluation: `docs/REPRODUCE.md`.
 
-## Results so far
-- f4 error: max 0.0452 on [-3, 3], 0.0719 at x = +-4; mean 0.0279 on (-4, 4) (`docs/FINDINGS.md`).
-- Quartus (Cyclone IV E): 8.058 ns critical path, Fmax about 123 MHz, 191 logic elements, no multipliers, no memory.
-- gem5: custom instruction decodes and runs (`gem5/test_custom.c`). The decoder logic matches the golden model on all 65,536 inputs. First speed-up measurement is in `gem5/benchmark.c`.
-
-## Known issues and next steps
-1. **Latency is not yet tied to the hardware.** The instruction runs as a plain integer-ALU op in gem5; it should
-   take the latency derived from the Quartus delay (`scripts/synth2gem5.py`).
-2. **Benchmark fairness.** `gem5/benchmark.c` sweeps raw -5000..+4990 (about 18% of inputs fall outside [-4, 4])
-   and both loops contain `volatile` stores. Next version: inputs in [-4, 4), identical loop overhead, stats
-   reset around the loop only, same `-O2` flags, plus integer-f4 and table baselines.
-3. **RTL vs reference.** Run `rtl/silu_tb.v` and compare with `golden/f4_vectors.hex`
-   (`python3 golden/f4_golden.py --compare results/raw/rtl_out.hex`); the result is not yet recorded.
-4. **Timing constraints.** Add `derive_clock_uncertainty` to `quartus/timing.sdc`. The power estimate in
-   `quartus/reports/` has low confidence (no simulation toggle data).
-5. In-order vs out-of-order, branch-predictor and Amdahl experiments: see `docs/SYLLABUS_MAP.md`.
+## Known limits
+Single-loop and single-layer microbenchmarks with a scalar core; code alignment moves small-loop results by 1-3
+cycles; the 8.058 ns delay is an FPGA slow-corner number; accuracy is on a 128-image set. See `docs/FINDINGS.md`, section 6.

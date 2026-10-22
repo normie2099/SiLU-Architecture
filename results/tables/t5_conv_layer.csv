@@ -1,0 +1,27 @@
+core,clock MHz,SiLU unit,variant,layer cycles,activation share of layer %,extra cycles per activation
+In-order (MinorCPU),100,-,float expf,1090015,23.3,124.15
+In-order (MinorCPU),100,-,integer f4,869908,3.9,16.67
+In-order (MinorCPU),100,-,table,873027,4.3,18.19
+In-order (MinorCPU),100,pipelined,custom insn,835765,0.0,0.0
+In-order (MinorCPU),500,-,float expf,1090015,23.3,124.15
+In-order (MinorCPU),500,-,integer f4,869908,3.9,16.67
+In-order (MinorCPU),500,-,table,873027,4.3,18.19
+In-order (MinorCPU),500,pipelined,custom insn,840245,0.5,2.19
+In-order (MinorCPU),500,multicycle,custom insn,840245,0.5,2.19
+In-order (MinorCPU),1000,-,float expf,1090015,23.3,124.15
+In-order (MinorCPU),1000,-,integer f4,869908,3.9,16.67
+In-order (MinorCPU),1000,-,table,873027,4.3,18.19
+In-order (MinorCPU),1000,pipelined,custom insn,854197,2.2,9.0
+Out-of-order (O3CPU),100,-,float expf,310141,48.6,73.66
+Out-of-order (O3CPU),100,-,integer f4,178835,10.9,9.54
+Out-of-order (O3CPU),100,-,table,177349,10.2,8.82
+Out-of-order (O3CPU),100,pipelined,custom insn,159294,0.0,0.0
+Out-of-order (O3CPU),500,-,float expf,310141,48.6,73.66
+Out-of-order (O3CPU),500,-,integer f4,178835,10.9,9.54
+Out-of-order (O3CPU),500,-,table,177349,10.2,8.82
+Out-of-order (O3CPU),500,pipelined,custom insn,159294,0.0,0.0
+Out-of-order (O3CPU),500,multicycle,custom insn,159294,0.0,0.0
+Out-of-order (O3CPU),1000,-,float expf,310141,48.6,73.66
+Out-of-order (O3CPU),1000,-,integer f4,178835,10.9,9.54
+Out-of-order (O3CPU),1000,-,table,177349,10.2,8.82
+Out-of-order (O3CPU),1000,pipelined,custom insn,170809,6.7,5.62

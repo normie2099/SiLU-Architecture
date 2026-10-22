@@ -1,5 +1,5 @@
 diff --git a/src/arch/riscv/isa/decoder.isa b/src/arch/riscv/isa/decoder.isa
-index c7eefbc79c..c914f5df00 100644
+index c7eefbc..7d14415 100644
 --- a/src/arch/riscv/isa/decoder.isa
 +++ b/src/arch/riscv/isa/decoder.isa
 @@ -420,6 +420,30 @@ decode QUADRANT default Unknown::unknown() {
@@ -27,7 +27,7 @@ index c7eefbc79c..c914f5df00 100644
 +                    }
 +
 +                    Rd_sd = (int64_t)(int16_t)result;                    
-+                }}, IntAluOp);
++                }}, SimdMiscOp);
 +            }
 +        }
          0x00: decode FUNCT3 {

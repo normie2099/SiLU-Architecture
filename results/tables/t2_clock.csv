@@ -1,0 +1,17 @@
+core,clock MHz,SiLU unit,latency (cycles),cycles/activation,ns/activation,speedup vs expf,speedup vs int f4,speedup vs table
+In-order (MinorCPU),100,pipelined,1,7.04,70.39,24.1,2.35,2.99
+In-order (MinorCPU),100,multicycle,1,7.04,70.39,24.1,2.35,2.99
+In-order (MinorCPU),200,pipelined,2,7.04,35.19,24.1,2.35,2.99
+In-order (MinorCPU),200,multicycle,2,7.04,35.19,24.1,2.35,2.99
+In-order (MinorCPU),500,pipelined,5,8.04,16.07,21.1,2.06,2.62
+In-order (MinorCPU),500,multicycle,5,8.04,16.07,21.1,2.06,2.62
+In-order (MinorCPU),1000,pipelined,12,15.04,15.04,11.3,1.1,1.4
+In-order (MinorCPU),1000,multicycle,9,12.04,12.04,14.1,1.38,1.75
+Out-of-order (O3CPU),100,pipelined,1,1.03,10.25,35.9,3.72,4.9
+Out-of-order (O3CPU),100,multicycle,1,1.03,10.25,35.9,3.72,4.9
+Out-of-order (O3CPU),200,pipelined,2,1.03,5.13,35.9,3.72,4.9
+Out-of-order (O3CPU),200,multicycle,2,2.01,10.04,18.3,1.9,2.5
+Out-of-order (O3CPU),500,pipelined,5,1.03,2.05,35.9,3.73,4.9
+Out-of-order (O3CPU),500,multicycle,5,5.0,10.01,7.4,0.76,1.0
+Out-of-order (O3CPU),1000,pipelined,12,1.03,1.03,35.9,3.73,4.9
+Out-of-order (O3CPU),1000,multicycle,9,9.0,9.0,4.1,0.42,0.56

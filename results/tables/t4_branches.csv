@@ -1,0 +1,11 @@
+core,variant,cycles/act (sorted),mispredicts/act (sorted),cycles/act (shuffled),mispredicts/act (shuffled),mispredicts per 1000 instr (shuffled),extra cycles from shuffling
+In-order (MinorCPU),loop only,6.03,0.002,6.03,0.002,0.42,0.0
+In-order (MinorCPU),float expf,169.8,0.007,175.46,0.443,3.87,5.66
+In-order (MinorCPU),integer f4,16.56,0.005,19.97,0.414,32.45,3.42
+In-order (MinorCPU),table,21.03,0.001,21.03,0.001,0.07,-0.0
+In-order (MinorCPU),custom insn,7.04,0.002,7.04,0.002,0.35,0.0
+Out-of-order (O3CPU),loop only,1.98,0.002,1.98,0.002,0.42,0.0
+Out-of-order (O3CPU),float expf,36.8,0.007,41.55,0.445,3.89,4.75
+Out-of-order (O3CPU),integer f4,3.82,0.006,9.23,0.416,32.6,5.41
+Out-of-order (O3CPU),table,5.02,0.001,5.02,0.001,0.07,0.0
+Out-of-order (O3CPU),custom insn,1.03,0.002,1.03,0.002,0.35,0.0

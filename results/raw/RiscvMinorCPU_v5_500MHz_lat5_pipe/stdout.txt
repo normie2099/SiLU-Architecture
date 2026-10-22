@@ -1,0 +1,14 @@
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 23.0.0.1
+gem5 compiled Oct 21 2026 20:31:09
+gem5 started Oct 21 2026 21:23:21
+gem5 executing on vm, pid 30626
+command line: /home/claude/gem5/build/RISCV/gem5.opt -d /home/claude/silu/silu-riscv-codesign/results/raw/RiscvMinorCPU_v5_500MHz_lat5_pipe /home/claude/silu/silu-riscv-codesign/gem5/configs/silu_se.py --silu-lat 5 --silu-units 1 --silu-pipelined 1 --cpu-type=RiscvMinorCPU --caches --cpu-clock=500.0MHz --sys-clock=500.0MHz -c /home/claude/silu/elf/bench_v5.elf
+
+info: Standard input is not a terminal, disabling listeners.
+Global frequency set at 1000000000000 ticks per second
+**** REAL SIMULATION ****
+variant=5 inputs=1024 reps=20 checksum=17528868 cycles=164553 instret=123292
+Exiting @ tick 386954000 because exiting with last active thread context

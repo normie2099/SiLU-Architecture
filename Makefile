@@ -1,12 +1,13 @@
 # One entry point for everything that can be rebuilt from files in this repo.
-# Targets that need your tools (gem5, Quartus, Vivado) are documented in docs/REPRODUCE.md.
+# gem5 / compiler / Quartus setup is described in docs/REPRODUCE.md.
 PY ?= python3
+GEM5 ?= $(HOME)/gem5
 
-.PHONY: all golden host-test torch-check inputs tables latency stats clean
+.PHONY: all golden host-test torch-check inputs rtl-check runs collect results yolo clean
 
 all: golden host-test torch-check
 
-golden:            ## error analysis of f4, paper self-check, regenerate the 65,536 test vectors
+golden:            ## error analysis of f4, check against the paper, regenerate the 65,536 test vectors
 	cd golden && $(PY) f4_golden.py
 
 host-test:         ## native C kernels vs golden vectors / exact SiLU
@@ -18,11 +19,22 @@ torch-check:       ## PyTorch emulator vs golden vectors (needs torch)
 inputs:            ## regenerate benchmark inputs (uniform over [-4,4)) and the lookup table
 	$(PY) bench/gen_inputs.py --n 1024 && $(PY) bench/gen_table.py
 
-latency:           ## synthesis delay -> gem5 latency table. Set DELAY_NS or REPORT.
-	$(PY) scripts/synth2gem5.py $(if $(REPORT),--report $(REPORT),--delay-ns $(DELAY_NS)) --clocks 50 100 200 500 1000 --pipeline-stages 1 2 3
+rtl-check:         ## Verilog vs golden on all 65,536 inputs (needs Icarus Verilog)
+	mkdir -p results/raw/rtl && cd results/raw/rtl && iverilog -g2012 -o /tmp/silu_tb.vvp ../../../rtl/silu.v ../../../rtl/silu_tb.v && vvp /tmp/silu_tb.vvp
+	$(PY) golden/f4_golden.py --compare results/raw/rtl/rtl_out.hex
 
-stats:             ## gem5 stats.txt files -> CSV
-	$(PY) scripts/parse_gem5_stats.py results/raw/*/stats.txt --out results/tables/runs.csv
+runs:              ## all gem5 experiments (builds the benchmarks, runs ~250 simulations) -> results/raw/
+	$(PY) scripts/run_all.py --gem5 $(GEM5) && sh scripts/pack_runs.sh
+
+collect:           ## results/raw/*/ -> results/tables/runs.csv
+	$(PY) scripts/collect_runs.py
+
+results: collect   ## runs.csv + YOLO json -> every table and figure
+	$(PY) scripts/make_results.py
+
+yolo:              ## swap SiLU in YOLOv8n and measure mAP (needs torch, ultralytics, yolov8n.pt, coco128/)
+	$(PY) model/count_model.py yolov8n.pt results/raw/yolo/model_counts.json
+	$(PY) model/eval_yolo.py --weights yolov8n.pt --data-dir coco128 --out results/raw/yolo
 
 clean:
-	rm -rf gem5/generated results/tables/runs.csv
+	rm -rf build results/tables results/figures

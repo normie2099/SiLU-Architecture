@@ -27,16 +27,17 @@ A multiplier-free SiLU instruction attacks all three terms at once, and the proj
 
 Not covered: Module 4 (parallel and distributed), virtual memory, VLIW.
 
-## Experiments
+## Experiments (all run; tables in `results/tables/summary.md`, figures in `results/figures/`)
 
-| ID | Question | Method | Status |
+| ID | Question | Method | Where |
 | --- | --- | --- | --- |
-| E1 | How much do instruction count, CPI and cycles drop? | Four variants (float `expf`, integer f4, table, custom instruction), same inputs and flags, gem5 stats | prototype in `gem5/benchmark.c`; needs the other variants and fair flags |
-| E2 | What latency does the instruction really have, and what does it cost at higher clocks? | `scripts/synth2gem5.py`: 8.058 ns -> 1 cycle at <=123 MHz, 2 at 200 MHz, 5 at 500 MHz, 9 at 1 GHz | script ready; needs the op-class hookup in gem5 |
-| E3 | In-order vs out-of-order | E1 and E2 on `MinorCPU` and `O3CPU` | to do |
-| E4 | Branch behaviour of software f4 | gem5 branch-predictor stats for the integer f4 variant vs the instruction | to do |
-| E5 | Whole-model effect (Amdahl) | Swap SiLU in a real network (`model/`), measure the activation share, apply Amdahl | emulator done; model run to do |
-| E6 | Table vs instruction under cache pressure | Sweep L1D size | optional |
+| E1 | How much do instruction count, CPI and cycles drop? | Five variants (loop only, float `expf`, integer f4, table, custom instruction), same inputs and flags, gem5 stats | `t1_variants.csv`, fig 1 |
+| E2 | What does the instruction really cost at a given clock? | Latency from the 8.058 ns Quartus delay: pipelined (N stages) or multi-cycle, clocks 100-1000 MHz | `t2_clock.csv`, fig 3 |
+| E2b | Which latencies can each core hide? | Custom instruction alone, latency 1-16 cycles, pipelined vs not | `t3_latency.csv`, fig 2 |
+| E3 | In-order vs out-of-order | E1, E2 on `RiscvMinorCPU` and `RiscvO3CPU` | all tables |
+| E4 | Branch behaviour of software f4 | Same loop with sorted vs shuffled inputs, branch-predictor statistics | `t4_branches.csv`, fig 6 |
+| E5 | Whole-model effect (Amdahl) | Conv layer in gem5; YOLOv8n MAC and activation counts; SiLU swapped into YOLOv8n and mAP measured | `t5`, `t6`, `t7`, figs 4-5 |
+| E7 | How much is code placement? | Same source at five loop alignments | `t8`, `t9` |
 
-Input range for all experiments: x in [-4, 4), the only range where the approximation is used (outside it SiLU
-is 0 or x).
+Input range for the loop experiments: x in [-4, 4), the range the approximation covers. In YOLOv8n 8.8% of
+activation inputs lie outside it (fig 5), where SiLU is 0 or x.

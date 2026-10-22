@@ -1,51 +1,44 @@
 # How to reproduce every result
 
-Order matters. Each step names its input, command and output. If a step cannot run yet, it says why.
+Each step names its input, command and output. Raw outputs go to `results/raw/`; tables and figures are generated
+from them and never edited by hand.
 
-## 0. Check the reference (works anywhere)
+## 0. Reference model and software checks (any machine with Python, numpy, gcc)
 ```
-make golden       # error analysis, paper self-check, writes golden/f4_vectors.hex
+make golden       # error analysis of f4, writes golden/f4_vectors.hex (65,536 vectors)
 make host-test    # C kernels vs golden
+pip install torch && make torch-check     # PyTorch emulator == golden on all 65,536 inputs
 ```
 
-## 1. Check the RTL (Gate G1)  [needs your simulator]
-1. Drive all 65,536 16-bit inputs through the Verilog testbench; write one `iiii oooo` hex pair per line
-   (input and output as 4-digit hex) to `results/raw/rtl_out.hex`.
-2. `python3 golden/f4_golden.py --compare results/raw/rtl_out.hex`
-3. Zero mismatches is the goal. If not: find which side is wrong (a constant off by 1, `<` vs `<=` at a
-   breakpoint) and fix that side. Never edit the vectors. Log the result in `LOG.md`.
-
-## 2. Software baselines on gem5  [needs gem5 + RISC-V toolchain]
-1. `make inputs` (uniform over [-4, 4), 1,024 values) or `python3 bench/gen_inputs.py --real file.npy`.
-2. Fill `bench/silu_insn.h` with the opcode/funct values from your `decoder.isa`.
-3. Build the five variants (names are suggestions):
-   - variant 1 (expf, soft-float): `-march=rv32im -mabi=ilp32 -DVARIANT=1`
-   - variant 2 (expf, hard-float): `-march=rv32imf -mabi=ilp32f -DVARIANT=2`
-   - variant 3 (integer f4): `-DVARIANT=3`;  variant 4 (table): `-DVARIANT=4`
-   - variant 5 (custom instruction): `-DVARIANT=5 -DSILU_OPCODE=... -DSILU_FUNCT3=... -DSILU_FUNCT7=...`
-   - all with the same `-O2`. Read each binary's disassembly of the loop and confirm the loop is there.
-4. Run each in gem5 and keep the whole output directory as `results/raw/<cpu>_<variant>_<clock>/`.
-5. `make stats` -> `results/tables/runs.csv`.
-Note: the harness that calls the kernel and the m5 stat-reset/dump around the loop are part of the gem5
-setup; see `gem5/README.md`.
-
-## 3. Latency from synthesis  [needs a Quartus timing report]
+## 1. RTL against the reference (Icarus Verilog)
 ```
-make latency REPORT=quartus/output_files/<name>.sta.rpt      # or: make latency DELAY_NS=8.058
+make rtl-check    # simulates rtl/silu.v on all 65,536 inputs; expect "0 mismatches"
 ```
-Writes `results/raw/latency_table.json` and one `gem5/generated/silu_lat_*.py` per clock/stage count.
-If the report format is not recognised the script stops and asks for `--delay-ns`; it does not guess.
 
-## 4. Model accuracy  [needs torch, ultralytics, COCO val2017]
+## 2. gem5 with the instruction
+Follow `gem5/README.md` (apply the patch, build `build/RISCV/gem5.opt`). A RISC-V cross compiler is needed. This
+project used Zig's bundled clang (`pip install ziglang`): `python3 -m ziglang cc -target riscv64-linux-musl
+-mcpu=baseline_rv64`. Any `riscv64` GCC/clang with a static libc and libm works; pass it with `--cc` to `run_all.py`.
 ```
-make torch-check                                     # emulator == golden on all 65,536 inputs
-# the YOLO evaluation script (model/eval_yolo.py) is NOT written yet: it needs the weights, COCO val2017 paths
-# and the Ultralytics version the team uses. Use swap_activations / count_calls from model/f4_torch.py inside it.
+make runs GEM5=~/gem5     # ~250 simulations, a few minutes; results/raw/<run>/
 ```
-Always print the swap count and the per-forward call count (`model/f4_torch.py: swap_activations,
-count_calls`). Compare the number of swapped activations with the number of Conv blocks you count in the
-model yourself (print `sum(1 for m in model.modules() if hasattr(m, 'act'))`); they must agree.
+Exhaustive check of the instruction inside gem5 (all 65,536 inputs):
+build `bench/exhaustive_main.c` with `-DVARIANT=5`, run it with `scripts/run_gem5.py --cpu RiscvAtomicSimpleCPU`, keep
+the `xxxx yyyy` lines and run `python3 golden/f4_golden.py --compare <lines>`.
 
-## 5. Report
-Tables and figures are generated from `results/` by scripts (to be added: `scripts/make_tables.py`,
-`scripts/make_figures.py`). Do not paste numbers by hand.
+## 3. Latency from synthesis
+`scripts/synth2gem5.py` holds the rule (cycles = ceil(delay / period); pipeline stages for the pipelined unit).
+`scripts/run_gem5.py` applies it per run: `--delay-ns 8.058` is the data delay from `quartus/reports/silu.sta.rpt`.
+
+## 4. Model accuracy (YOLOv8n)
+```
+pip install ultralytics      # weights: yolov8n.pt;  data: COCO128 (128 COCO images with labels)
+make yolo
+```
+`model/eval_yolo.py` prints, for each activation, the number of SiLU modules replaced, the number left (must be 0),
+the activation call count, the share of inputs outside [-4,4] and the mAP.
+
+## 5. Tables and figures
+```
+make results      # results/tables/*.csv, results/tables/summary.md, results/figures/*.png
+```

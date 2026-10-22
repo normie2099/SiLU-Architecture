@@ -1,36 +1,38 @@
-# gem5: the custom instruction and its benchmarks
+# gem5: the custom instruction
 
 | File | What it is |
 | --- | --- |
-| `silu_instruction.patch` | Diff for `src/arch/riscv/isa/decoder.isa` (gem5 v23.0.0.1). Adds `custom_silu`: R-type, opcode `0x0B` (custom-0), funct3 `0`, funct7 `0`, `rd = f4(rs1)` in Q6.10. Operation class `IntAluOp`. |
-| `benchmark.c` | First prototype: float `expf` loop vs custom-instruction loop, cycle counts read with `rdcycle`. |
-| `test_custom.c` | 11-vector parity test of the instruction against known f4 outputs. |
+| `silu_instruction.patch` | Diff for `src/arch/riscv/isa/decoder.isa` (gem5 v23.0.0.1). Adds `custom_silu`: R-type, opcode `0x0B` (custom-0), funct3 `0`, funct7 `0`, `rd = f4(rs1)` in Q6.10, operation class `SimdMiscOp`. |
+| `configs/silu_se.py` | Wrapper around gem5's `se.py`. Gives `SimdMisc` its own functional unit with a chosen latency, for the in-order (`RiscvMinorCPU`) and out-of-order (`RiscvO3CPU`) models. |
+| `benchmark.c`, `test_custom.c` | The first prototype benchmark and the 11-vector parity test (kept for history; the experiments use `bench/bench_main.c`). |
 
-Apply and build:
-```
-cd <gem5 checkout> && git apply <this repo>/gem5/silu_instruction.patch
-scons build/RISCV/gem5.opt -j8
-```
+## Why `SimdMiscOp`
+gem5 gives an instruction its latency from its operation class. With `IntAluOp` the SiLU would share the integer
+ALU (3 cycles by default on `MinorCPU`, 1 on `O3CPU`) and its latency could not be set from synthesis. RISC-V in
+gem5 v23 never uses the SIMD operation classes, so `SimdMisc` is effectively free: `silu_se.py` removes it from the
+shared SIMD/float units and adds one dedicated unit. This needs no change to gem5's C++ beyond the decoder.
 
-Compile a benchmark (state the flags with every result; this is what the prototype used):
+## Build
 ```
-riscv64-linux-gnu-gcc -O2 -static -march=rv64gc -mabi=lp64d benchmark.c -o benchmark.elf -lm
+git apply gem5/silu_instruction.patch          # in the gem5 checkout
+scons build/RISCV/gem5.opt -j8                 # Python 3.11 and SCons 4.4 work; Python 3.13 does not
 ```
-Run with the in-order and out-of-order models (list the exact CPU type names with `--list-cpu-types` for your gem5 version):
-```
-build/RISCV/gem5.opt configs/example/se.py --cpu-type=MinorCPU --caches -c benchmark.elf
-```
+(If the link step is killed for lack of memory, relink with `-fuse-ld=lld -Wl,--strip-debug`.)
 
-## How the instruction gets its latency
-The instruction is decoded as `IntAluOp`, so on `MinorCPU` and `O3CPU` it takes whatever latency the integer ALU
-functional unit has (1 cycle by default). That number is not derived from the hardware. The plan is to take the
-critical-path delay from the Quartus report (`quartus/reports/`) and convert it with
-`scripts/synth2gem5.py` (cycles = ceil(delay / clock period)), then give the instruction its own op class and
-functional-unit latency in the CPU config.
+## Run one experiment
+```
+python3 scripts/run_gem5.py --gem5 ~/gem5 --cpu RiscvO3CPU --variant 5 --elf build/bench_v5.elf \
+        --clock-mhz 500 --hw pipelined          # latency comes from the 8.058 ns Quartus delay
+```
+or the whole grid: `make runs`. Every run directory keeps `stats.txt`, `config.ini`, stdout, the exact command, the
+MD5 of the ELF and of gem5.opt (`manifest.json`).
 
-## Notes
-- O3CPU only executes an op class that exists in its functional-unit pool. After any change, dump
-  `m5out/config.ini`, read the latency the instruction really gets, and check with a one-instruction test.
-- Measure only the loop: use m5 `reset_stats` / `dump_stats` around it, or subtract an empty-loop run. Say which.
-- Report with every table: CPU model, issue width, ROB size, clock, cache sizes, memory latency, compile flags,
-  gem5 version.
+## Two SiLU hardware options modelled
+- **pipelined**: N register stages (N = fewest with `8.058/N + 0.3 ns <= period`), latency N cycles, a new SiLU can issue every cycle.
+- **multicycle**: the 8.058 ns logic left unregistered, latency `ceil(8.058 ns / period)`, unit busy for the whole latency.
+The 0.3 ns per-stage register overhead is an assumption.
+
+## Measuring only the loop
+`bench/bench_main.c` calls gem5's `reset_stats` before and `dump_stats` after the timed loop (magic instruction
+opcode `0x7b`, funct7 `0x40` / `0x41`), so the first statistics block of `stats.txt` covers exactly the loop.
+`scripts/collect_runs.py` reads that block. Note `simInsts` is not reset by gem5; use `commitStats0.numInsts`.

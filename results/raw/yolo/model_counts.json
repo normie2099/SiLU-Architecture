@@ -1,0 +1,9 @@
+{
+ "model": "yolov8n.pt",
+ "input": "1x3x640x640",
+ "conv_layers": 64,
+ "macs": 4371993600,
+ "silu_calls": 57,
+ "silu_elements": 13888000,
+ "macs_per_silu_element": 314.8036866359447
+}

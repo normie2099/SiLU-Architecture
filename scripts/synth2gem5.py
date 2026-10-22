@@ -46,6 +46,14 @@ def cycles(delay_ns, clock_mhz, stage_overhead_ns=0.0, stages=1):
     return per_stage * stages, per_stage
 
 
+def min_stages(delay_ns, clock_mhz, stage_overhead_ns=0.3):
+    """Fewest pipeline stages N such that delay/N + register overhead fits in one clock period (N=1 needs no overhead)."""
+    period = 1000.0 / clock_mhz
+    if delay_ns <= period:
+        return 1
+    return math.ceil(delay_ns / (period - stage_overhead_ns) - 1e-9)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     g = ap.add_mutually_exclusive_group(required=True)
