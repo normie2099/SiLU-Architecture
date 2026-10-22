@@ -6,23 +6,33 @@ and results/raw/yolo/*.json). Nothing here is typed by hand.
 Writes  results/tables/*.csv, results/tables/summary.md, results/figures/*.png
 Run:    python3 scripts/collect_runs.py && python3 scripts/make_results.py
 """
-import csv, json, pathlib
+import csv, json, os, pathlib
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-TAB, FIG = ROOT / "results/tables", ROOT / "results/figures"
+# IEEE_FIG=1 writes print-size figures (7.16 in full width / 3.45 in column, Times-metric font, hatched bars) to results/figures/ieee
+IEEE = bool(os.environ.get("IEEE_FIG"))
+TAB, FIG = ROOT / "results/tables", ROOT / ("results/figures/ieee" if IEEE else "results/figures")
 TAB.mkdir(parents=True, exist_ok=True); FIG.mkdir(parents=True, exist_ok=True)
 
 CPU = {"RiscvMinorCPU": "In-order (MinorCPU)", "RiscvO3CPU": "Out-of-order (O3CPU)"}
 VAR = {"0": "loop only", "1": "float expf", "3": "integer f4", "4": "table", "5": "custom insn"}
 COL = {"0": "#8a8a85", "1": "#eb6834", "3": "#1baf7a", "4": "#e87ba4", "5": "#2a78d6"}   # fixed per variant
 INK, MUTED = "#0b0b0b", "#52514e"
-plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK, "xtick.color": MUTED,
+plt.rcParams.update({"font.size": 8 if IEEE else 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK, "xtick.color": MUTED,
                      "ytick.color": MUTED, "axes.spines.top": False, "axes.spines.right": False,
                      "axes.grid": True, "grid.color": "#e6e5e1", "grid.linewidth": 0.6, "axes.axisbelow": True})
+
+if IEEE:
+    plt.rcParams.update({"font.family": "serif", "font.serif": ["Liberation Serif", "Times New Roman", "DejaVu Serif"],
+                         "mathtext.fontset": "stix", "axes.labelsize": 8, "xtick.labelsize": 7.5, "ytick.labelsize": 7.5,
+                         "axes.edgecolor": "#333333", "xtick.color": "#222222", "ytick.color": "#222222"})
+W32, W34, SINGLE, HIST = ((7.16, 2.6), (7.16, 2.7), (3.45, 2.75), (3.45, 2.3)) if IEEE else ((8.2, 3.2), (8.2, 3.4), (6.4, 3.4), (6.2, 3.0))
+DPI = 300 if IEEE else 200
+HATCH = {"0": "", "1": "////", "3": "\\\\", "4": "....", "5": "xxxx"} if IEEE else {k: "" for k in "01345"}
 
 rows = list(csv.DictReader(open(TAB / "runs.csv")))
 for r in rows:
@@ -100,7 +110,7 @@ h3 = ["core", "SiLU unit"] + [f"lat {L}" for L in lats]
 save_csv("t3_latency.csv", h3, t3)
 md_table("E2b - cycles per activation vs SiLU latency (1 GHz core, custom instruction only)", h3, t3)
 
-fig, ax = plt.subplots(1, 2, figsize=(8.2, 3.2), sharey=True)
+fig, ax = plt.subplots(1, 2, figsize=W32, sharey=True)
 for i, cpu in enumerate(CPU):
     for hw, ls, lab in (("pipelined", "-", "pipelined unit"), ("multicycle", "--", "multi-cycle unit")):
         ys = [[r for r in rows if "E2b" in r["run"] and r["cpu"] == cpu and r["hw"] == hw and int(r["silu_lat"]) == L][0]
@@ -109,25 +119,25 @@ for i, cpu in enumerate(CPU):
     ax[i].axhline(pick("loop", cpu, "3", 1000.0)["cycles_per_input"], color=COL["3"], lw=1.2)
     ax[i].text(lats[-1], pick("loop", cpu, "3", 1000.0)["cycles_per_input"] * 1.03, "integer f4", color=MUTED, ha="right", fontsize=8)
     ax[i].set_title(CPU[cpu], fontsize=9, color=INK, loc="left"); ax[i].set_xlabel("SiLU latency (cycles)")
-ax[0].set_ylabel("cycles per activation"); ax[0].legend(frameon=False, fontsize=8, loc="upper left")
-fig.tight_layout(); fig.savefig(FIG / "fig2_latency_sweep.png", dpi=200); plt.close(fig)
+ax[0].set_ylabel("cycles per activation"); ax[0].legend(frameon=False, fontsize=8, loc="lower right")
+fig.tight_layout(); fig.savefig(FIG / "fig2_latency_sweep.png", dpi=DPI); plt.close(fig)
 
 # ------------------------------------------------------------- fig1: cycles per activation by variant, both cores
-fig, ax = plt.subplots(figsize=(6.4, 3.4))
+fig, ax = plt.subplots(figsize=SINGLE)
 w = 0.38
 for j, cpu in enumerate(CPU):
     for i, v in enumerate(VAR):
         y = pick("loop", cpu, v, 100.0)["cycles_per_input"]
         ax.bar(i + (j - 0.5) * w, y, w * 0.94, color=COL[v], alpha=1.0 if j == 0 else 0.55,
-               edgecolor="none")
+               edgecolor="#333333" if IEEE else "none", linewidth=0.4, hatch=HATCH[v])
         ax.text(i + (j - 0.5) * w, y * 1.08, f"{y:.0f}" if y >= 20 else f"{y:.1f}", ha="center", fontsize=7.5, color=INK)
-ax.set_yscale("log"); ax.set_xticks(range(len(VAR))); ax.set_xticklabels(VAR.values())
+ax.set_yscale("log"); ax.set_xticks(range(len(VAR))); ax.set_xticklabels([x.replace(' ', chr(10)) for x in VAR.values()] if IEEE else VAR.values())
 ax.set_ylabel("cycles per activation (log)"); ax.set_ylim(1, 400)
 ax.text(0.01, 0.97, "solid = in-order, light = out-of-order", transform=ax.transAxes, va="top", fontsize=8, color=MUTED)
-fig.tight_layout(); fig.savefig(FIG / "fig1_cycles_per_activation.png", dpi=200); plt.close(fig)
+fig.tight_layout(); fig.savefig(FIG / "fig1_cycles_per_activation.png", dpi=DPI); plt.close(fig)
 
 # ------------------------------------------------------------- fig3: wall-clock time vs clock
-fig, ax = plt.subplots(1, 2, figsize=(8.2, 3.4), sharey=True)
+fig, ax = plt.subplots(1, 2, figsize=W34, sharey=True)
 clocks = [100.0, 200.0, 500.0, 1000.0]
 for i, cpu in enumerate(CPU):
     for v in ("1", "3", "4"):
@@ -146,7 +156,7 @@ for i, cpu in enumerate(CPU):
     ax[i].set_title(CPU[i if False else cpu], fontsize=9, loc="left", color=INK); ax[i].set_xlabel("core clock (MHz)")
 ax[0].set_ylabel("ns per activation")
 ax[0].text(0.03, 0.06, "blue solid = custom insn, pipelined\nblue dashed = custom insn, multi-cycle", transform=ax[0].transAxes, fontsize=8, color=COL["5"])
-fig.tight_layout(); fig.savefig(FIG / "fig3_time_vs_clock.png", dpi=200); plt.close(fig)
+fig.tight_layout(); fig.savefig(FIG / "fig3_time_vs_clock.png", dpi=DPI); plt.close(fig)
 
 # ------------------------------------------------------------- T4: branch behaviour, sorted vs shuffled inputs (E4)
 t4 = []
@@ -162,18 +172,18 @@ h4 = ["core", "variant", "cycles/act (sorted)", "mispredicts/act (sorted)", "cyc
 save_csv("t4_branches.csv", h4, t4)
 md_table("E4 - branch prediction: the same loop with sorted vs shuffled inputs (100 MHz)", h4, t4,
          "Sorted inputs make every compare in the software f4 predictable; shuffled inputs make the branches data-dependent, as in a real layer. The custom instruction and the table have no data-dependent branches.")
-fig, ax = plt.subplots(1, 2, figsize=(8.2, 3.2), sharey=True)
+fig, ax = plt.subplots(1, 2, figsize=W32, sharey=True)
 for i, cpu in enumerate(CPU):
     for j, v in enumerate(("1", "3", "4", "5")):
         a = pick("loop", cpu, v, 100.0)["cycles_per_input"]; b = pick("loopshuf", cpu, v, 100.0)["cycles_per_input"]
-        ax[i].bar(j - 0.2, a, 0.38, color=COL[v], alpha=0.5); ax[i].bar(j + 0.2, b, 0.38, color=COL[v])
+        ax[i].bar(j - 0.2, a, 0.38, color=COL[v], alpha=0.5, hatch=HATCH[v], edgecolor="#333333" if IEEE else "none", linewidth=0.4); ax[i].bar(j + 0.2, b, 0.38, color=COL[v], hatch=HATCH[v], edgecolor="#333333" if IEEE else "none", linewidth=0.4)
         ax[i].text(j + 0.2, b * 1.06, f"{b:.0f}" if b >= 20 else f"{b:.1f}", ha="center", fontsize=7.5)
         ax[i].text(j - 0.2, a * 1.06, f"{a:.0f}" if a >= 20 else f"{a:.1f}", ha="center", fontsize=7.5, color=MUTED)
     ax[i].set_xticks(range(4)); ax[i].set_xticklabels([VAR[v] for v in ("1", "3", "4", "5")])
     ax[i].set_yscale("log"); ax[i].set_ylim(1, 400); ax[i].set_title(CPU[cpu], fontsize=9, loc="left", color=INK)
 ax[0].set_ylabel("cycles per activation (log)")
 ax[0].text(0.02, 0.96, "light = sorted inputs, solid = shuffled", transform=ax[0].transAxes, va="top", fontsize=8, color=MUTED)
-fig.tight_layout(); fig.savefig(FIG / "fig6_branch_sorted_vs_shuffled.png", dpi=200); plt.close(fig)
+fig.tight_layout(); fig.savefig(FIG / "fig6_branch_sorted_vs_shuffled.png", dpi=DPI); plt.close(fig)
 
 # ------------------------------------------------------------- T8: alignment sensitivity (E7)
 t8 = []
@@ -204,7 +214,7 @@ h10 = ["core", "variant"] + [f"L1D {z}" for z in SZ]
 save_csv("t10_cache.csv", h10, t10)
 md_table("E6 - cycles per activation vs L1 data-cache size (500 MHz, shuffled inputs, no L2)", h10, t10,
          "Working set: 2 KB of inputs, plus 0.5 KB of table for the table variant.")
-fig, ax = plt.subplots(1, 2, figsize=(8.2, 3.2), sharey=True)
+fig, ax = plt.subplots(1, 2, figsize=W32, sharey=True)
 for i, cpu in enumerate(CPU):
     for v in ("3", "4", "5"):
         ys = [d for d in [r for r in t10 if r[0] == CPU[cpu] and r[1] == VAR[v]][0][2:]]
@@ -213,7 +223,7 @@ for i, cpu in enumerate(CPU):
     ax[i].set_xticks(range(len(SZ))); ax[i].set_xticklabels(SZ); ax[i].set_xlim(-0.3, len(SZ) + 0.6)
     ax[i].set_title(CPU[cpu], fontsize=9, loc="left", color=INK); ax[i].set_xlabel("L1 data cache size")
 ax[0].set_ylabel("cycles per activation")
-fig.tight_layout(); fig.savefig(FIG / "fig7_cache_sweep.png", dpi=200); plt.close(fig)
+fig.tight_layout(); fig.savefig(FIG / "fig7_cache_sweep.png", dpi=DPI); plt.close(fig)
 
 # ------------------------------------------------------------- T5: convolution layer + activation (E5, Amdahl)
 t5 = []
@@ -254,13 +264,13 @@ if yp.exists():
     if "hist_counts" in y.get("silu", {}):
         bins = np.array(y["hist_bins"]) if "hist_bins" in y else np.linspace(-12, 12, 97)
         h = np.array(y["silu"]["hist_counts"], float); h /= h.sum()
-        fig, ax = plt.subplots(figsize=(6.2, 3.0))
+        fig, ax = plt.subplots(figsize=HIST)
         ax.bar(bins[:-1], h * 100, width=np.diff(bins), align="edge", color=COL["5"], alpha=0.85)
         for xv in (-4, 4): ax.axvline(xv, color=COL["1"], lw=1.4)
-        ax.text(0, ax.get_ylim()[1] * 0.92, "approximation range [-4, 4]", ha="center", fontsize=8, color=COL["1"])
+        ax.text(-11.6 if IEEE else 0, ax.get_ylim()[1] * 0.92, "approx. range\n[-4, 4]" if IEEE else "approximation range [-4, 4]", ha="left" if IEEE else "center", fontsize=8, color=COL["1"])
         ax.set_xlabel("SiLU input x (last bins catch |x| > 12)"); ax.set_ylabel("% of activation inputs")
         ax.set_yscale("log")
-        fig.tight_layout(); fig.savefig(FIG / "fig5_yolo_activation_inputs.png", dpi=200); plt.close(fig)
+        fig.tight_layout(); fig.savefig(FIG / "fig5_yolo_activation_inputs.png", dpi=DPI); plt.close(fig)
 
 # ------------------------------------------------------------- T9: conv layer alignment sensitivity
 t9 = []
@@ -298,17 +308,21 @@ h7 = ["core", "MAC speed-up k", "conv cycles/MAC", "cyc/act expf", "cyc/act f4",
 save_csv("t7_yolov8n_amdahl.csv", h7, t7)
 md_table(f"E5 - YOLOv8n whole-network estimate at 500 MHz ({MAC/1e9:.2f} GMAC, {ACT/1e6:.1f} M SiLU elements per 640x640 image)", h7, t7,
          "Cycles per MAC = median over 5 loop alignments of the conv-layer benchmark (conv only); cycles per activation = shuffled-input loop minus its loop-only baseline, at 500 MHz (E4 runs); k divides the MAC time (what a SIMD unit or accelerator would do). An ESTIMATE: scalar conv microbenchmark scaled to the network, caches ignored.")
-fig, ax = plt.subplots(1, 2, figsize=(8.2, 3.2), sharey=True)
+fig, ax = plt.subplots(1, 2, figsize=W32, sharey=True)
 for i, cpu in enumerate(CPU):
     for v in ("1", "3", "4"):
         ax[i].plot(ks, curves[cpu][v], color=COL[v], lw=2)
-        ax[i].text(ks[-1], curves[cpu][v][-1], " " + VAR[v], color=MUTED, fontsize=8, va="center")
+        close = abs(np.log(curves[cpu]["3"][-1] / curves[cpu]["4"][-1])) < 0.12
+        if v == "4" and close:
+            continue
+        ax[i].text(ks[-1], curves[cpu][v][-1], " " + ("integer f4 = table" if (v == "3" and close) else VAR[v]), color=MUTED, fontsize=8,
+                   va="center")
     ax[i].axhline(1, color=MUTED, lw=0.8)
     ax[i].set_xscale("log"); ax[i].set_yscale("log"); ax[i].set_xlim(1, 700); ax[i].set_title(CPU[cpu], fontsize=9, loc="left", color=INK)
     ax[i].set_yticks([1, 2, 5, 10, 20, 50]); ax[i].set_yticklabels(["1", "2", "5", "10", "20", "50"]); ax[i].set_ylim(0.95, 70)
     ax[i].set_xlabel("MAC (convolution) speed-up k")
 ax[0].set_ylabel("whole-network speedup of the custom insn\nover this software SiLU")
-fig.tight_layout(); fig.savefig(FIG / "fig4_amdahl_yolov8n.png", dpi=200); plt.close(fig)
+fig.tight_layout(); fig.savefig(FIG / "fig4_amdahl_yolov8n.png", dpi=DPI); plt.close(fig)
 
 (TAB / "summary.md").write_text("\n".join(md) + "\n")
 print("tables:", sorted(p.name for p in TAB.iterdir()))

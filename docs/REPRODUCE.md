@@ -45,6 +45,7 @@ make results      # results/tables/*.csv, results/tables/summary.md, results/fig
 
 ## 6. Report and slides
 ```
+IEEE_FIG=1 python3 scripts/make_results.py                          # print-size figures -> results/figures/ieee
 cd results/report && pdflatex report.tex && pdflatex report.tex   # IEEEtran, uses results/figures
 node scripts/build_slides.js                                          # run from the repo root; needs pptxgenjs
 ```
