@@ -1,7 +1,7 @@
 const pptxgen = require("pptxgenjs");
 const pres = new pptxgen();
 pres.layout = "LAYOUT_16x9";
-pres.author = "Ayush Krishna";
+pres.author = "Author Names";
 pres.title = "Multiplier-Less SiLU Custom Instruction for RISC-V";
 const NAVY="14213D", BLUE="2A78D6", ORANGE="EB6834", GREEN="1BAF7A", INK="1F2937", MUTED="5B6577", TINT="EEF2F8";
 const FIG="results/figures/";
@@ -20,7 +20,7 @@ function stat(s,x,y,w,big,label,color,sz){
 { const s=pres.addSlide(); s.background={color:NAVY};
   T(s,"Hardware–Software Co-Design of a Multiplier-Less SiLU Custom Instruction for RISC-V",{x:0.7,y:1.1,w:8.6,h:1.9,fontFace:"Cambria",fontSize:34,bold:true,color:"FFFFFF"});
   T(s,"In-order vs out-of-order in gem5, with YOLOv8n as the workload",{x:0.7,y:3.1,w:8.6,h:0.5,fontSize:20,color:"BFD4F2"});
-  T(s,"Ayush Krishna · B.Tech Electronics & VLSI, VIT Vellore · BAEVD202 Computer Architecture",{x:0.7,y:4.5,w:8.6,h:0.4,fontSize:14,color:"BFD4F2"});
+  T(s,"First Author · Second Author · Third Author · Fourth Author · Fifth Author\nDepartment of Electronics Engineering, University Name",{x:0.7,y:4.3,w:8.6,h:0.7,fontSize:14,color:"BFD4F2"});
   s.addNotes("One-line pitch: does a SiLU instruction actually pay off once you measure it with the iron law and Amdahl's law?"); }
 
 // 2 question
@@ -44,7 +44,7 @@ function stat(s,x,y,w,big,label,color,sz){
   T(s,"Checked on all 65,536 inputs: RTL, C, PyTorch and the gem5 instruction agree with the golden model, 0 mismatches.",{x:5.9,y:4.4,w:3.6,h:0.7,fontSize:13,color:MUTED}); }
 
 // 4 flow
-{ const s=slide("Synthesis delay to gem5 latency, by script","The professor's objection: hand-typing '1 cycle' into gem5. Now run_gem5.py computes latency from the Quartus delay and the clock. Multi-cycle: ceil(d/T). Pipelined: smallest N with d/N + 0.3 ns <= T (0.3 ns is an assumption).");
+{ const s=slide("Synthesis delay to gem5 latency, by script","A hand-typed '1 cycle' in gem5 would disconnect synthesis from simulation. Now run_gem5.py computes latency from the Quartus delay and the clock. Multi-cycle: ceil(d/T). Pipelined: smallest N with d/N + 0.3 ns <= T (0.3 ns is an assumption).");
   const steps=[["RTL","silu.v, combinational"],["Quartus","8.058 ns, 191 LEs"],["run_gem5.py","latency = ceil(d / T)"],["gem5","custom op class + own FU"]];
   steps.forEach((st,i)=>{ const x=0.5+i*2.35; s.addShape(pres.shapes.RECTANGLE,{x,y:1.5,w:2.0,h:1.2,fill:{color:i==2?BLUE:TINT},line:{color:i==2?BLUE:TINT},objectName:"flow box "+(i+1)});
     T(s,st[0],{x:x+0.1,y:1.62,w:1.8,h:0.4,fontSize:18,bold:true,color:i==2?"FFFFFF":NAVY,align:"center"});
@@ -117,6 +117,6 @@ function stat(s,x,y,w,big,label,color,sz){
        {text:"Latency is derived from synthesis by script, not typed by hand",options:{bullet:true,breakLine:true}},
        {text:"Accuracy cost beyond Q6.10 rounding ≈ 0.0015 mAP50–95 (128 images)",options:{bullet:true}}],{x:0.7,y:1.3,w:8.6,h:2.4,fontSize:18,color:"FFFFFF",paraSpaceAfter:8});
   T(s,[{text:"Limits: ",options:{bold:true,color:"BFD4F2"}},{text:"one loop and one scalar conv layer; ±1–3 cycle placement noise; FPGA slow-corner delay; 0.3 ns/stage assumed. Future work: GPU (Vortex) comparison.",options:{color:"BFD4F2"}}],{x:0.7,y:4.0,w:8.6,h:1.0,fontSize:14});
-  T(s,"github.com/normie2099/SiLU-Architecture",{x:0.7,y:4.95,w:8.6,h:0.3,fontSize:12,color:"BFD4F2"}); }
+  T(s,"Project repository: <link>",{x:0.7,y:4.95,w:8.6,h:0.3,fontSize:12,color:"BFD4F2"}); }
 
 pres.writeFile({fileName:"results/slides/SiLU_class_presentation.pptx"}).then(()=>console.log("ok"));

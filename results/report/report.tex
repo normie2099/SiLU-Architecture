@@ -17,10 +17,20 @@
 
 \title{Hardware--Software Co-Design of a Multiplier-Less SiLU Custom Instruction for RISC-V: In-Order versus Out-of-Order in gem5}
 
-\author{\IEEEauthorblockN{Ayush Krishna}
-\IEEEauthorblockA{School of Electronics Engineering, VIT Vellore\\
-Course BAEVD202, Computer Architecture\\
-ayushkrishb1@gmail.com}}
+\author{\IEEEauthorblockN{First Author}
+\IEEEauthorblockA{Department of Electronics Engineering\\University Name, City, Country\\author1@example.com}
+\and
+\IEEEauthorblockN{Second Author}
+\IEEEauthorblockA{Department of Electronics Engineering\\University Name, City, Country\\author2@example.com}
+\and
+\IEEEauthorblockN{Third Author}
+\IEEEauthorblockA{Department of Electronics Engineering\\University Name, City, Country\\author3@example.com}
+\and
+\IEEEauthorblockN{Fourth Author}
+\IEEEauthorblockA{Department of Electronics Engineering\\University Name, City, Country\\author4@example.com}
+\and
+\IEEEauthorblockN{Fifth Author}
+\IEEEauthorblockA{Department of Electronics Engineering\\University Name, City, Country\\author5@example.com}}
 
 \maketitle
 
@@ -33,7 +43,7 @@ RISC-V, custom instruction, SiLU, gem5, Amdahl's law, out-of-order execution, ha
 \end{IEEEkeywords}
 
 \section{Introduction}
-Activation functions are a small part of a neural network's arithmetic but are awkward on simple processors: SiLU \cite{elfwing2018,ramachandran2017} needs an exponential and a division. A natural architectural reply is a custom instruction. Whether that pays off is a computer-architecture question, not a circuit question: it depends on how many instructions the baseline needs, on cycles per instruction (CPI) in the pipeline that executes it, on the clock period, and on what fraction of total run time the function occupies. This work therefore treats the instruction as an object to be evaluated with the quantitative tools of the course --- the iron law, Amdahl's law, hazards, in-order versus out-of-order execution, and branch prediction --- rather than as a hardware block to be admired.
+Activation functions are a small part of a neural network's arithmetic but are awkward on simple processors: SiLU \cite{elfwing2018,ramachandran2017} needs an exponential and a division. A natural architectural reply is a custom instruction. Whether that pays off is a computer-architecture question, not a circuit question: it depends on how many instructions the baseline needs, on cycles per instruction (CPI) in the pipeline that executes it, on the clock period, and on what fraction of total run time the function occupies. This work therefore treats the instruction as an object to be evaluated with the quantitative tools of computer architecture --- the iron law, Amdahl's law, hazards, in-order versus out-of-order execution, and branch prediction --- rather than as a hardware block to be admired.
 
 \textbf{Contributions.}
 (1) A complete, scripted flow from RTL and timing report to a gem5 functional unit whose latency is computed (not hand-entered) from the synthesis delay and the target clock.
@@ -57,7 +67,7 @@ x & x>4
 \end{equation}
 where the divisions are arithmetic shifts and the constants are 384 and 38 in Q6.10. Only shifts, adds and compares are needed. Over $(-4,4)$ the mean absolute error is 0.0279 (the paper reports 0.0278) and the maximum is 0.072 at the segment edges; $f_4(0)=-0.0375$ whereas $\mathrm{SiLU}(0)=0$, and the output is discontinuous at $x=\pm4$ (step 0.125) and $x=\pm1$ (0.025).
 
-\subsection{Course concepts used}
+\subsection{Architectural concepts used}
 The \emph{iron law} \cite{hennessy} states $T=\mathrm{IC}\times\mathrm{CPI}\times T_{clk}$: the instruction removes dynamic instructions (IC) and may change CPI and $T_{clk}$. \emph{Amdahl's law} \cite{amdahl1967} bounds a whole-program speedup by the fraction of time sped up. A multi-cycle unit creates \emph{data hazards} for dependent instructions and, if unpipelined, a \emph{structural hazard}. An in-order pipeline stalls on these; an out-of-order core can overlap independent iterations. Software $f_4$ is a chain of data-dependent compares, so its performance depends on \emph{branch prediction}.
 
 \section{Method}
@@ -113,7 +123,7 @@ Speedups of the instruction are 24.1$\times$ over \texttt{expf}, 2.35$\times$ ov
 \caption{Cycles per activation against unit latency (1 GHz core, instruction loop only).}
 \label{fig:lat}
 \end{figure}
-Fig.~\ref{fig:lat} varies latency from 1 to 16 cycles. In-order, cycles are flat up to latency 4 (the first few cycles are absorbed by the remaining loop instructions) and then grow one-for-one with latency; pipelined and unpipelined units give identical values, since an in-order core does not issue the next SiLU before the previous result is consumed. Out-of-order, a \emph{pipelined} unit hides every latency tested (1.03 cycles at 16), while an \emph{unpipelined} unit exposes it completely: 5 cycles at 500 MHz and 9 at 1 GHz. At 500 MHz an unpipelined unit is therefore \emph{slower} than integer $f_4$ (0.76$\times$ of its speed); at 1 GHz it is slower (0.42$\times$). This is a structural hazard in the sense of the course, and it implies that the 8.058 ns unit must be pipelined to be useful in a fast out-of-order core.
+Fig.~\ref{fig:lat} varies latency from 1 to 16 cycles. In-order, cycles are flat up to latency 4 (the first few cycles are absorbed by the remaining loop instructions) and then grow one-for-one with latency; pipelined and unpipelined units give identical values, since an in-order core does not issue the next SiLU before the previous result is consumed. Out-of-order, a \emph{pipelined} unit hides every latency tested (1.03 cycles at 16), while an \emph{unpipelined} unit exposes it completely: 5 cycles at 500 MHz and 9 at 1 GHz. At 500 MHz an unpipelined unit is therefore \emph{slower} than integer $f_4$ (0.76$\times$ of its speed); at 1 GHz it is slower (0.42$\times$). This is a structural hazard in the textbook sense, and it implies that the 8.058 ns unit must be pipelined to be useful in a fast out-of-order core.
 
 \begin{figure}[t]
 \centering
@@ -236,7 +246,7 @@ $k$ & In-order & O3 & In-order & O3\\
 \end{itemize}
 
 \section{Conclusion}
-A multiplier-free SiLU instruction is a 24--36$\times$ win on the activation loop against \texttt{expf} and a 2.4--3.7$\times$ win against integer C, but a 1.1$\times$ and 1.01--1.02$\times$ win respectively on a scalar-core YOLOv8n; its value grows with how much the rest of the network is accelerated. It must be pipelined to help an out-of-order core, and its advantage over software is larger for unpredictable data because it removes branches. The flow that derives its latency from synthesis is scripted and reproducible, with all raw runs, tables and figures kept in the repository \texttt{normie2099/SiLU-Architecture}.
+A multiplier-free SiLU instruction is a 24--36$\times$ win on the activation loop against \texttt{expf} and a 2.4--3.7$\times$ win against integer C, but a 1.1$\times$ and 1.01--1.02$\times$ win respectively on a scalar-core YOLOv8n; its value grows with how much the rest of the network is accelerated. It must be pipelined to help an out-of-order core, and its advantage over software is larger for unpredictable data because it removes branches. The flow that derives its latency from synthesis is scripted and reproducible, with all raw runs, tables and figures kept in the project repository.
 
 \section*{Reproducibility}
 All numbers are produced by commands in \texttt{docs/REPRODUCE.md}; raw gem5 outputs are in \texttt{results/raw/} and the tables and figures in this report are generated from them by \texttt{scripts/make\_results.py}. 296 gem5 runs were made.
