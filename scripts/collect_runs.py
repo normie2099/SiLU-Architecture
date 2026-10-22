@@ -46,7 +46,7 @@ def main():
         w = re.search(r"inputs=(\d+) reps=(\d+)", so); mac = re.search(r"macs=(\d+)", so)
         r = {"run": man["name"], "bench": man.get("bench", "loop"), "macs": int(mac.group(1)) if mac else "", "cpu": man["cpu"], "variant": man["variant"], "clock_mhz": man["clock_mhz"],
              "silu_lat": man["silu_latency_cycles"], "hw": man["hw"],
-             "checksum": m.group(1) if m else ""}
+             "checksum": m.group(1) if m else "", "extra": man.get("extra", "")}
         for k, key in WANT.items():
             r[k] = st.get(key, "")
         n_in = int(w.group(1)) * int(w.group(2))   # activations evaluated in the timed region

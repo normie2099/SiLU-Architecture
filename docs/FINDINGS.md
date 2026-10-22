@@ -35,6 +35,8 @@ clocks above ~123 MHz extrapolate it to faster technology and are illustrative.
 - **Latency vs clock** (`t2`, `t3`). In-order: flat until the latency reaches 4 cycles, then +1 cycle per extra cycle of latency; at 1 GHz (12-stage pipelined or 9-cycle multi-cycle unit) the instruction is only 1.1-1.4x faster than integer f4. Out-of-order: a pipelined unit hides any latency up to 16 cycles (1.03 cycles per activation); an unpipelined unit exposes it completely (5 cycles at 500 MHz = as slow as integer f4; 9 cycles at 1 GHz = slower). The unit has to be pipelined for the out-of-order benefit.
 - **Branch prediction** (`t4`, fig 6). With sorted inputs the software f4 is predictable. With shuffled inputs it mispredicts 0.41 branches per activation (32 per 1000 instructions), costing +3.4 cycles in-order and +5.4 out-of-order (3.8 -> 9.2); `expf` adds 0.44 mispredicts per activation. The custom instruction and the table have no data-dependent branches.
 
+- **Cache** (`t10`, fig 7; shuffled loop, 500 MHz, no L2). Shrinking the L1 data cache from 64 kB to 512 B costs the table 35% in-order (21.0 -> 28.5 cycles) and 21% out-of-order (5.0 -> 6.1), and the custom instruction 8.0 -> 8.5 / 1.0 -> 1.5 cycles (its only loads are the inputs). The table only suffers once the cache is smaller than its working set (1 kB and up: <= 3% in-order); the instruction's advantage over the table is therefore not mainly a cache effect at this table size (514 bytes). A larger table (more segments or finer interpolation) would be affected sooner.
+
 ## 5. Model-level results (YOLOv8n, 640x640)
 - The network has 4.37 GMAC and 13.9 M SiLU elements per image: 315 MACs per activation (57 SiLU modules, 64 convolutions).
 - Swap check: 57 of 57 SiLU modules replaced, 0 left, 969 activation calls in the validation run (= 57 x 17 batches).
@@ -53,7 +55,7 @@ clocks above ~123 MHz extrapolate it to faster technology and are illustrative.
 - **Amdahl** (`t7`, fig 4; estimate from measured cycles per MAC and per activation at 500 MHz). With a scalar core the activation is a small part of the network, so replacing `expf` gives 1.09x (in-order) / 1.11x (out-of-order) whole-network speedup, and replacing integer f4 gives 1.01-1.02x. If the MACs get 16x faster (SIMD, accelerator) the numbers become 2.5x / 2.7x over `expf` and 1.1x / 1.3x over integer f4; at 64x, 6.6x / 8.0x and 1.4x / 2.3x. The instruction matters when the multiply-accumulate part is accelerated, not on a scalar core.
 
 ## 6. Limits of these results
-- One activation loop and one scalar convolution layer, caches ignored; the network-level numbers are an estimate scaled from them.
+- One activation loop and one scalar convolution layer, default cache hierarchy (64 kB L1D) except E6; the network-level numbers are an estimate scaled from them.
 - Alignment sensitivity (section 4); conv-layer differences between the cheap variants are within noise, so network estimates use shuffled-loop costs.
 - The in-order and out-of-order models use gem5's default configurations; the SiLU unit count is 1.
 - 0.3 ns per pipeline stage is an assumption; the 8.058 ns delay is from a slow-corner FPGA.

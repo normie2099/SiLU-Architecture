@@ -40,6 +40,7 @@ def main():
     ap.add_argument("--silu-units", type=int, default=1)
     ap.add_argument("--out", default="results/raw")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--extra", default="", help="extra se.py options, e.g. \"--l1d_size=2kB\" (recorded in the manifest)")
     ap.add_argument("--bench", default="loop", help="loop (bench_main.c) or conv (conv_main.c); prefixes the run name")
     a = ap.parse_args()
 
@@ -63,7 +64,7 @@ def main():
     cmd = [str(gem5 / "build/RISCV/gem5.opt"), "-d", str(out), str(cfg),
            "--silu-lat", str(lat), "--silu-units", str(a.silu_units), "--silu-pipelined", "1" if pipelined else "0",
            f"--cpu-type={a.cpu}", "--caches", f"--cpu-clock={clk}", f"--sys-clock={clk}",
-           "-c", str(pathlib.Path(a.elf).resolve())]
+           *a.extra.split(), "-c", str(pathlib.Path(a.elf).resolve())]
     env = dict(os.environ, GEM5_ROOT=str(gem5))
     t0 = time.time()
     r = subprocess.run(cmd, cwd=gem5, env=env, capture_output=True, text=True)
@@ -71,7 +72,7 @@ def main():
     (out / "stdout.txt").write_text(r.stdout)
     (out / "stderr.txt").write_text(r.stderr)
     man = {"name": name, "cmd": cmd, "returncode": r.returncode, "wall_s": round(wall, 1),
-           "cpu": a.cpu, "variant": a.variant, "bench": a.bench, "clock_mhz": a.clock_mhz, "period_ns": period,
+           "cpu": a.cpu, "variant": a.variant, "bench": a.bench, "extra": a.extra, "clock_mhz": a.clock_mhz, "period_ns": period,
            "silu_latency_cycles": lat, "latency_source": src, "silu_delay_ns": a.delay_ns,
            "silu_pipelined": pipelined, "hw": a.hw, "stage_overhead_ns": a.stage_overhead_ns, "silu_units": a.silu_units,
            "elf": a.elf, "elf_md5": md5(a.elf), "gem5_bin_md5": md5(gem5 / "build/RISCV/gem5.opt"),

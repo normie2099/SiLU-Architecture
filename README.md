@@ -27,7 +27,7 @@ gem5/      silu_instruction.patch, configs/silu_se.py (op-class latency), build 
 bench/     bench_main.c (activation loop), conv_main.c (conv layer), exhaustive_main.c, kernels, inputs
 model/     PyTorch f4, swap tools, eval_yolo.py, count_model.py
 scripts/   run_gem5.py, run_all.py, collect_runs.py, make_results.py, synth2gem5.py, pack_runs.sh
-results/   raw/ (every gem5 run, RTL and YOLO outputs), tables/ (generated), figures/ (generated)
+results/   report/ (IEEE paper: report.tex, report.pdf), slides/ (class deck), raw/ (every gem5 run, RTL and YOLO outputs), tables/ (generated), figures/ (generated)
 docs/      SYLLABUS_MAP.md, FINDINGS.md (all numbers), REPRODUCE.md (commands)
 ```
 

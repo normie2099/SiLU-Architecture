@@ -189,6 +189,32 @@ save_csv("t8_alignment.csv", h8, t8)
 md_table("E7 - sensitivity of cycles/activation to loop alignment (100 MHz)", h8, t8,
          "Same source, different code alignment (-falign-loops). Tiny loops are front-end sensitive in gem5; the spread bounds how much of any single number is code placement rather than the instruction.")
 
+# ------------------------------------------------------------- T10: L1 data-cache sweep (E6)
+SZ = ["512B", "1kB", "2kB", "4kB", "64kB"]
+t10 = []
+for cpu in CPU:
+    for v in ("1", "3", "4", "5"):
+        ys = []
+        for sz in SZ:
+            xs = [r for r in rows if r["bench"] == "loopcache" and r["cpu"] == cpu and r["variant"] == v and r["extra"] == f"--l1d_size={sz}"]
+            assert len(xs) == 1
+            ys.append(xs[0]["cycles_per_input"])
+        t10.append([CPU[cpu], VAR[v]] + [round(y, 2) for y in ys])
+h10 = ["core", "variant"] + [f"L1D {z}" for z in SZ]
+save_csv("t10_cache.csv", h10, t10)
+md_table("E6 - cycles per activation vs L1 data-cache size (500 MHz, shuffled inputs, no L2)", h10, t10,
+         "Working set: 2 KB of inputs, plus 0.5 KB of table for the table variant.")
+fig, ax = plt.subplots(1, 2, figsize=(8.2, 3.2), sharey=True)
+for i, cpu in enumerate(CPU):
+    for v in ("3", "4", "5"):
+        ys = [d for d in [r for r in t10 if r[0] == CPU[cpu] and r[1] == VAR[v]][0][2:]]
+        ax[i].plot(range(len(SZ)), ys, color=COL[v], lw=2, marker="o", ms=4)
+        ax[i].text(len(SZ) - 0.9, ys[-1], VAR[v], color=MUTED, fontsize=8, va="center")
+    ax[i].set_xticks(range(len(SZ))); ax[i].set_xticklabels(SZ); ax[i].set_xlim(-0.3, len(SZ) + 0.6)
+    ax[i].set_title(CPU[cpu], fontsize=9, loc="left", color=INK); ax[i].set_xlabel("L1 data cache size")
+ax[0].set_ylabel("cycles per activation")
+fig.tight_layout(); fig.savefig(FIG / "fig7_cache_sweep.png", dpi=200); plt.close(fig)
+
 # ------------------------------------------------------------- T5: convolution layer + activation (E5, Amdahl)
 t5 = []
 for cpu in CPU:

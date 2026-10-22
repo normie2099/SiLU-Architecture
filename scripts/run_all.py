@@ -6,6 +6,7 @@ scripts/run_gem5.py (which keeps stats, config, stdout and a manifest for each r
   E1/E2/E3/E4  every variant x {in-order, out-of-order} x core clock {100,200,500,1000} MHz.
                SiLU unit either pipelined (N stages) or multi-cycle (ceil(delay/period)); delay 8.058 ns from Quartus
   E4           the same loop with shuffled inputs (data-dependent branches)
+  E6           L1D size sweep, table lookup vs custom instruction
   E7           loop-alignment sensitivity (front-end effects on tiny loops)
   E5           3x3 conv layer + activation (Amdahl)
   E2b          latency isolation: custom instruction only, 1 GHz, latency 1..9 cycles, pipelined / not pipelined
@@ -17,6 +18,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 CPUS = ["RiscvMinorCPU", "RiscvO3CPU"]
 VARIANTS = [0, 1, 3, 4, 5]
 CLOCKS = [100, 200, 500, 1000]
+L1D = ["512B", "1kB", "2kB", "4kB", "64kB"]   # E6: L1 data-cache size sweep (64kB = gem5 default)
 ALIGNS = [0, 8, 16, 32]          # E7: loop alignment sensitivity (headline builds use 64)
 LATS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16]
 
@@ -93,6 +95,12 @@ def main():
             for v in VARIANTS:
                 jobs.append(base + ["--cpu", cpu, "--variant", str(v), "--elf", str(elf / f"convalign{al}_v{v}.elf"),
                                     "--clock-mhz", "500", "--hw", "pipelined", "--bench", f"convalign{al}"])
+    for cpu in CPUS:                      # E6: table (needs memory) vs instruction (needs none) under cache pressure
+        for sz in L1D:
+            for v in (1, 3, 4, 5):
+                jobs.append(base + ["--cpu", cpu, "--variant", str(v), "--elf", str(elf / f"shuf_v{v}.elf"),
+                                    "--clock-mhz", "500", "--hw", "pipelined", "--bench", "loopcache",
+                                    f"--extra=--l1d_size={sz}", "--tag", f"_l1d{sz}"])
     bad = 0
     with cf.ThreadPoolExecutor(a.jobs) as ex:
         for r in ex.map(one, jobs):

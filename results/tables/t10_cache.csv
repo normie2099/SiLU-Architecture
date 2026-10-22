@@ -1,0 +1,9 @@
+core,variant,L1D 512B,L1D 1kB,L1D 2kB,L1D 4kB,L1D 64kB
+In-order (MinorCPU),float expf,183.96,180.42,177.54,175.46,175.46
+In-order (MinorCPU),integer f4,20.25,20.26,20.01,19.98,19.98
+In-order (MinorCPU),table,28.49,21.59,21.23,21.07,21.03
+In-order (MinorCPU),custom insn,8.53,8.54,8.08,8.04,8.04
+Out-of-order (O3CPU),float expf,47.42,44.68,42.78,41.55,41.55
+Out-of-order (O3CPU),integer f4,9.76,9.76,9.25,9.23,9.23
+Out-of-order (O3CPU),table,6.08,5.2,5.12,5.03,5.02
+Out-of-order (O3CPU),custom insn,1.48,1.48,1.06,1.03,1.03

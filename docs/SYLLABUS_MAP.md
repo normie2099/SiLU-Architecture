@@ -37,6 +37,7 @@ Not covered: Module 4 (parallel and distributed), virtual memory, VLIW.
 | E3 | In-order vs out-of-order | E1, E2 on `RiscvMinorCPU` and `RiscvO3CPU` | all tables |
 | E4 | Branch behaviour of software f4 | Same loop with sorted vs shuffled inputs, branch-predictor statistics | `t4_branches.csv`, fig 6 |
 | E5 | Whole-model effect (Amdahl) | Conv layer in gem5; YOLOv8n MAC and activation counts; SiLU swapped into YOLOv8n and mAP measured | `t5`, `t6`, `t7`, figs 4-5 |
+| E6 | Does a 514-byte table suffer under cache pressure? | Table vs instruction, L1D 512 B to 64 kB, shuffled loop, 500 MHz | `t10_cache.csv`, fig 7 |
 | E7 | How much is code placement? | Same source at five loop alignments | `t8`, `t9` |
 
 Input range for the loop experiments: x in [-4, 4), the range the approximation covers. In YOLOv8n 8.8% of

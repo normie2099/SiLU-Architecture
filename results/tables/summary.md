@@ -84,6 +84,21 @@ Same source, different code alignment (-falign-loops). Tiny loops are front-end 
 | Out-of-order (O3CPU) | table | 5.02 | 6.02 | 5.02 | 5.02 | 6.02 | 5.02 | 5.02 | 6.02 |
 | Out-of-order (O3CPU) | custom insn | 1.03 | 1.03 | 1.03 | 4.02 | 1.03 | 1.03 | 1.03 | 4.02 |
 
+## E6 - cycles per activation vs L1 data-cache size (500 MHz, shuffled inputs, no L2)
+
+Working set: 2 KB of inputs, plus 0.5 KB of table for the table variant.
+
+| core | variant | L1D 512B | L1D 1kB | L1D 2kB | L1D 4kB | L1D 64kB |
+|---|---|---|---|---|---|---|
+| In-order (MinorCPU) | float expf | 183.96 | 180.42 | 177.54 | 175.46 | 175.46 |
+| In-order (MinorCPU) | integer f4 | 20.25 | 20.26 | 20.01 | 19.98 | 19.98 |
+| In-order (MinorCPU) | table | 28.49 | 21.59 | 21.23 | 21.07 | 21.03 |
+| In-order (MinorCPU) | custom insn | 8.53 | 8.54 | 8.08 | 8.04 | 8.04 |
+| Out-of-order (O3CPU) | float expf | 47.42 | 44.68 | 42.78 | 41.55 | 41.55 |
+| Out-of-order (O3CPU) | integer f4 | 9.76 | 9.76 | 9.25 | 9.23 | 9.23 |
+| Out-of-order (O3CPU) | table | 6.08 | 5.2 | 5.12 | 5.03 | 5.02 |
+| Out-of-order (O3CPU) | custom insn | 1.48 | 1.48 | 1.06 | 1.03 | 1.03 |
+
 ## E5 - 3x3 conv layer (8->8 channels, 16x16, 147,456 MACs, 2,048 activations, scalar code)
 
 Caution: the layer is ~0.85M cycles, so a 1% shift from code placement is ~4 cycles per activation (see the alignment table): differences of a few cycles per activation between the cheap variants are NOT resolvable here; only expf is clearly separated.

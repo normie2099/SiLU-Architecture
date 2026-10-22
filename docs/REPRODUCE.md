@@ -42,3 +42,9 @@ the activation call count, the share of inputs outside [-4,4] and the mAP.
 ```
 make results      # results/tables/*.csv, results/tables/summary.md, results/figures/*.png
 ```
+
+## 6. Report and slides
+```
+cd results/report && pdflatex report.tex && pdflatex report.tex   # IEEEtran, uses results/figures
+node scripts/build_slides.js                                          # run from the repo root; needs pptxgenjs
+```
