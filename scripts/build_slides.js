@@ -1,7 +1,7 @@
 const pptxgen = require("pptxgenjs");
 const pres = new pptxgen();
 pres.layout = "LAYOUT_16x9";
-pres.author = "Author Names";
+pres.author = "Ayush Krishna, Vrinda Pandey, Tanvee Chintala, Chandni Srivastava, Eswar Sesha Sai";
 pres.title = "Multiplier-Less SiLU Custom Instruction for RISC-V";
 const NAVY="14213D", BLUE="2A78D6", ORANGE="EB6834", GREEN="1BAF7A", INK="1F2937", MUTED="5B6577", TINT="EEF2F8";
 const FIG="results/figures/";
@@ -20,7 +20,7 @@ function stat(s,x,y,w,big,label,color,sz){
 { const s=pres.addSlide(); s.background={color:NAVY};
   T(s,"Hardware–Software Co-Design of a Multiplier-Less SiLU Custom Instruction for RISC-V",{x:0.7,y:1.1,w:8.6,h:1.9,fontFace:"Cambria",fontSize:34,bold:true,color:"FFFFFF"});
   T(s,"In-order vs out-of-order in gem5, with YOLOv8n as the workload",{x:0.7,y:3.1,w:8.6,h:0.5,fontSize:20,color:"BFD4F2"});
-  T(s,"First Author · Second Author · Third Author · Fourth Author · Fifth Author\nDepartment of Electronics Engineering, University Name",{x:0.7,y:4.3,w:8.6,h:0.7,fontSize:14,color:"BFD4F2"});
+  T(s,"Ayush Krishna · Vrinda Pandey · Tanvee Chintala · Chandni Srivastava · Eswar Sesha Sai\nSchool of Electronics Engineering, Vellore Institute of Technology",{x:0.7,y:4.3,w:8.6,h:0.7,fontSize:14,color:"BFD4F2"});
   s.addNotes("One-line pitch: does a SiLU instruction actually pay off once you measure it with the iron law and Amdahl's law?"); }
 
 // 2 question
@@ -30,6 +30,20 @@ function stat(s,x,y,w,big,label,color,sz){
   const items=[["Iron law","T = IC × CPI × clock"],["Amdahl's law","bounded by the activation share"],["Hazards","latency and pipelining"],["Branch prediction","software f4 is a compare chain"]];
   items.forEach((it,i)=>{ const y=1.3+i*0.95; s.addShape(pres.shapes.RECTANGLE,{x:5.4,y,w:4.1,h:0.8,fill:{color:TINT},line:{color:TINT},objectName:"concept card"});
     T(s,it[0],{x:5.6,y:y+0.1,w:3.8,h:0.3,fontSize:16,bold:true,color:BLUE}); T(s,it[1],{x:5.6,y:y+0.43,w:3.8,h:0.3,fontSize:13,color:MUTED}); }); }
+
+// 2b concept map
+{ const s=slide("Where each architecture concept shows up","Maps every concept to the experiment and the measured result. E1..E7 are the experiment IDs in the report and repo.");
+  const hdr={bold:true,color:"FFFFFF",fill:{color:NAVY},fontFace:"Calibri",fontSize:13};
+  const c=(t,o)=>({text:t,options:Object.assign({fontFace:"Calibri",fontSize:13,color:INK,valign:"middle"},o||{})});
+  const rows=[["Iron law (IC × CPI × clock)","E1","Instructions 114 → 6 per activation; CPI alone misleads"],
+   ["Amdahl's law","E5","Whole YOLOv8n ≈ 1.1× on a scalar core; 2.5–2.7× if MACs are 16× faster"],
+   ["ISA design","—","Custom-0 R-type, rd = f4(rs1), 16-bit Q6.10 operand"],
+   ["Structural / data hazards","E2","Unpipelined 5-cycle unit is slower than integer C out-of-order"],
+   ["In-order vs out-of-order","E3","24× vs 36× over expf; OoO hides any latency if pipelined"],
+   ["Branch prediction","E4","Software f4: 0.41 mispredicts per activation, +3.4 / +5.4 cycles"],
+   ["Memory hierarchy","E6","Table loses 35% at a 512 B L1D; instruction needs no table"]];
+  s.addTable([["Concept","Exp.","Result"].map(t=>({text:t,options:hdr}))].concat(rows.map(r=>[c(r[0],{bold:true,color:NAVY}),c(r[1],{align:"center"}),c(r[2])])),
+    {x:0.5,y:1.2,w:9,colW:[2.7,0.7,5.6],rowH:0.5,border:{type:"solid",color:"D5DCE8",pt:0.75}}); }
 
 // 3 approximation
 { const s=slide("The approximation: six segments, no multiplier","Spagnolo, Perri, Corsonello, ISVLSI 2025. Q6.10 fixed point, constants 384 and 38. Max error and mean error over (-4,4).");
